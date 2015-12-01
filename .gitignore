@@ -1,3 +1,6 @@
+*.o
+sysif/build
+
 *.exe
 *.out
 #ignore thumbnails created by windows

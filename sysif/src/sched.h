@@ -12,7 +12,10 @@ struct pcb_s {
 	void * sp;
 	struct pcb_s * next;
 	state currentState;
+	int codeRetour;
 };
+
+void __attribute__((naked)) irq_handler(void);
 
 typedef int(func_t) (void);
 struct pcb_s * create_process(func_t* entry);
@@ -22,7 +25,7 @@ void sys_yieldto(struct pcb_s* dest);
 void do_sys_yieldto(int * new_stack);
 void sys_yield();
 void do_sys_yield(int * new_stack);
-void sys_exit();
-void do_sys_exit(int * new_stack);
+void sys_exit(int codeRetour);
+void do_sys_exit(int * new_stack, int codeRetour);
 
 #endif

@@ -43,24 +43,20 @@ void do_sys_nop(void){
 	
 }
 
-void do_sys_settime(void){
-	/*
-	uint32_t first32 = *(old_stack + 1);
-	uint32_t last32 = *(old_stack + 2);
+void do_sys_settime(int * new_stack){
+	uint32_t first32 = *(new_stack + 1);
+	uint32_t last32 = *(new_stack + 2);
 	uint64_t date_ms = ((uint64_t)first32) << 32 | last32;
 	set_date_ms(date_ms);
-	*/
 }
 
 
-void do_sys_gettime(void){
-	/*
+void do_sys_gettime(int * new_stack){
 	uint64_t date_ms = get_date_ms();
 	int first32 = date_ms >> 32;
 	int last32 = date_ms;
-	(old_stack+0) = first32;
-	(old_stack+1) = last32; 
-	*/
+	*(new_stack+0) = first32;
+	*(new_stack+1) = last32;
 }
 
 void __attribute__((naked)) swi_handler(void){
@@ -74,15 +70,17 @@ void __attribute__((naked)) swi_handler(void){
 	}else if(numAppel==2){
 		do_sys_nop();
 	}else if(numAppel==3){
-		do_sys_settime();
+		do_sys_settime(new_stack);
 	}else if(numAppel==4){
-		do_sys_gettime();
+		do_sys_gettime(new_stack);
 	}else if(numAppel==5){
 		do_sys_yieldto(new_stack);
 	}else if(numAppel==6){
 		do_sys_yield(new_stack);
 	}else if(numAppel==7){
-		do_sys_exit(new_stack);
+		int codeRetour;
+		__asm("mov %0, r0" : "=r"(codeRetour));
+		do_sys_exit(new_stack, codeRetour);
 	}else{
 		PANIC();
 	}

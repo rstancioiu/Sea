@@ -10,8 +10,8 @@ uint64_t sys_gettime();
 
 void do_sys_reboot(void);
 void do_sys_nop(void);
-void do_sys_settime(void);
-void do_sys_gettime(void);
+void do_sys_settime(int * new_stack);
+void do_sys_gettime(int * new_stack);
 
 void __attribute__((naked)) swi_handler(void);
 
