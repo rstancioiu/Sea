@@ -1,4 +1,4 @@
-# Application Dev-OO
+# Sea
 
 This repository contains the implementation of a mini-OS on Raspberry PI.   
 For more details regarding the application or would you wish to provide us with some feedback, don't hesitate to contact us at one of the following e-mail addresses:
