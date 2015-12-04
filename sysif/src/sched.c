@@ -6,31 +6,29 @@
 #include "asm_tools.h"
 
 struct pcb_s * current_process, * root_process, * last_process;
+int lr_irq;
+int * irq_stack;
 
 void __attribute__((naked)) irq_handler(void){
-	int lr_irq;
+	// Backup du LR IRQ
 	__asm("mov %0, lr" : "=r"(lr_irq));	
 	
 	//Passage en SVC
 	__asm("cps 0x13");
 	__asm("push {%0}" : : "r"(lr_irq-4));
 	__asm("stmfd sp!, {r0-r12}");
-	
-	int * new_stack;
-	__asm("mov %0, sp" : "=r"(new_stack));	
+	__asm("mov %0, sp" : "=r"(irq_stack));	
 	
 	//Changement de contexte
-	do_sys_yield(new_stack);
-	__asm("ldmfd sp!, {r0-r12}");
-	__asm("pop {%0}" : "=r"(lr_irq));
 	set_next_tick_default();
 	ENABLE_TIMER_IRQ();
 	ENABLE_IRQ();
-	__asm("cps 0x10");
+	do_sys_yield(irq_stack);
+	__asm("ldmfd sp!, {r0-r12}^");
+	__asm("pop {%0}" : "=r"(lr_irq));
 	
 	//Jump
 	__asm("mov pc, %0" : : "r"(lr_irq));
-	
 }
 
 void sched_init(){
