@@ -1,4 +1,4 @@
-*.o
+**/*.o
 sysif/build
 
 *.exe
