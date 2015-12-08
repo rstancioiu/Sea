@@ -3,6 +3,7 @@
 *.elf
 *.map
 *.md5
+*~
 
 *.exe
 *.out
