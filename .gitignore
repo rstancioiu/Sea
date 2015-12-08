@@ -1,5 +1,8 @@
-**/*.o
-sysif/build
+*.o
+*.list
+*.elf
+*.map
+*.md5
 
 *.exe
 *.out
