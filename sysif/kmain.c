@@ -34,15 +34,11 @@ void user_process3()
 
 void kmain( void )
 {
-    sched_init();
+    sched_init(FPP);
 
-    create_process((func_t*)&user_process1);
-	create_process((func_t*)&user_process2);
-	create_process((func_t*)&user_process3);
-	
-	//Interruption related
-	ENABLE_IRQ();
-	timer_init();
+    create_fpp_process((func_t*)&user_process1, 1, 1);
+	create_fpp_process((func_t*)&user_process2, 1, 1);
+	create_fpp_process((func_t*)&user_process3, 1, 1);
 	
     __asm("cps 0x10"); // switch CPU to USER mode
     // ******************************************
