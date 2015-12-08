@@ -1,3 +1,10 @@
+*.o
+*.list
+*.elf
+*.map
+*.md5
+*~
+
 *.exe
 *.out
 #ignore thumbnails created by windows
