@@ -135,12 +135,15 @@ void elect_fpp()
 	current_process = winning_process;
 }
 
-void do_sys_yieldto(int * new_stack) {
-	//Get new process
-	struct pcb_s* dest = (struct pcb_s*) *(new_stack + 1);
-	
+void do_sys_yield(int * new_stack) {
 	//Backup old process
-	__asm("mrs %0, spsr" : "=r"(current_process->CPSR_USER));
+	__asm("cps #31"); // System mode
+	__asm("mov %0, lr" : "=r"(current_process->LR_USER)); 
+	__asm("mov %0, sp" : "=r"(current_process->sp));  
+	__asm("cps #19"); // Back to SVC
+	
+	//__asm("mrs %0, spsr" : "=r"(current_process->CPSR_USER));
+	
 	for(int i=0;i<13;i++) {
 		current_process->R[i] = *(new_stack + i);
 	}
@@ -148,8 +151,19 @@ void do_sys_yieldto(int * new_stack) {
 	current_process->currentState = WAITING;
 	
 	//Apply new process
-	current_process = dest;
-	__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
+	if(chosen_method==FPP) {
+		elect_fpp();
+	} else {
+		elect();
+	}
+	
+	__asm("cps #31"); // System mode
+	__asm("mov lr, %0" : : "r"(current_process->LR_USER)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Back to SVC
+	
+	//__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
+	
 	for(int i=0;i<13;i++) {
 		*(new_stack + i) = current_process->R[i];
 	}
@@ -157,44 +171,9 @@ void do_sys_yieldto(int * new_stack) {
 	current_process->currentState = RUNNING;
 }
 
-void sys_yieldto(struct pcb_s* dest) {
-	__asm("mov %0, lr" : "=r"(current_process->LR_USER));
-	__asm("mov %0, sp" : "=r"(current_process->sp));
-	__asm("mov r0, %0" : : "r"(5));
-	__asm("mov r1, %0" : : "r"(dest));
-	__asm("SWI #0");
-	__asm("mov lr, %0" : : "r"(current_process->LR_USER));
-	__asm("mov sp, %0" : : "r"(current_process->sp));
-}
-
-void do_sys_yield(int * new_stack) {
-	//Backup old process
-	__asm("mrs %0, spsr" : "=r"(current_process->CPSR_USER));
-	for(int i=0;i<13;i++) {
-		current_process->R[i] = *(new_stack + i);
-	}
-	current_process->LR_SVC = *(new_stack + 13);
-	
-	//Apply new process
-	if(chosen_method==FPP) {
-		elect_fpp();
-	} else {
-		elect();
-	}
-	__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
-	for(int i=0;i<13;i++) {
-		*(new_stack + i) = current_process->R[i];
-	}
-	*(new_stack + 13) = current_process->LR_SVC;
-}
-
 void sys_yield() {
-	__asm("mov %0, lr" : "=r"(current_process->LR_USER));
-	__asm("mov %0, sp" : "=r"(current_process->sp));
     __asm("mov r0, %0" : : "r"(6));
     __asm("SWI #0");
-    __asm("mov lr, %0" : : "r"(current_process->LR_USER));
-	__asm("mov sp, %0" : : "r"(current_process->sp));
 }
 
 void do_sys_exit(int * new_stack, int codeRetour) {
@@ -204,7 +183,14 @@ void do_sys_exit(int * new_stack, int codeRetour) {
 	
 	//Apply new process
 	elect();
-	__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
+	
+	__asm("cps #31"); // System mode
+	__asm("mov lr, %0" : : "r"(current_process->LR_USER)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Back to SVC
+	
+	//__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
+	
 	for(int i=0;i<13;i++) {
 		*(new_stack + i) = current_process->R[i];
 	}

@@ -74,7 +74,8 @@ void __attribute__((naked)) swi_handler(void){
 	}else if(numAppel==4){
 		do_sys_gettime(new_stack);
 	}else if(numAppel==5){
-		do_sys_yieldto(new_stack);
+		do_sys_nop();
+		//do_sys_yieldto(new_stack);
 	}else if(numAppel==6){
 		do_sys_yield(new_stack);
 	}else if(numAppel==7){
