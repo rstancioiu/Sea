@@ -5,9 +5,10 @@
 #include "hw.h"
 #include "asm_tools.h"
 
-struct pcb_s * current_process, * root_process, * last_process;
+struct pcb_s * current_process, * root_process, * last_process, * drawing_process, * running_process;
 int lr_irq;
 int * irq_stack;
+
 schedMethod chosen_method;
 
 void __attribute__((naked)) irq_handler(void) {
@@ -24,7 +25,7 @@ void __attribute__((naked)) irq_handler(void) {
 	set_next_tick_default();
 	ENABLE_TIMER_IRQ();
 	ENABLE_IRQ();
-	do_sys_yield(irq_stack);
+	do_sys_yield(irq_stack, 0);
 	__asm("ldmfd sp!, {r0-r12}^");
 	__asm("pop {%0}" : "=r"(lr_irq));
 	
@@ -32,7 +33,7 @@ void __attribute__((naked)) irq_handler(void) {
 	__asm("mov pc, %0" : : "r"(lr_irq));
 }
 
-void sched_init(schedMethod method) {
+struct pcb_s * sched_init(schedMethod method) {
 	kheap_init();
 	
 	//Scheduler related
@@ -48,11 +49,20 @@ void sched_init(schedMethod method) {
 	last_process = current_process;
 	chosen_method = method;
 	
-	//If FPP or preemptive is chosen, enable IRQ
+	/*
+	If FPP or preemptive is chosen, enable IRQ
 	if(method==PREEMPTIVE || method==FPP) {
 		ENABLE_IRQ();
 		timer_init();
 	}
+	*/
+	
+	//Draw related
+	//Note : Enable IRQ anyway
+	
+	drawing_process = NULL;
+	running_process = current_process;
+	return current_process;
 }
 
 struct pcb_s * create_process(func_t* entry) {
@@ -76,6 +86,20 @@ struct pcb_s * create_fpp_process(func_t* entry, int basePriority, int priority)
 	s->basePriority = basePriority;
 	s->priority = priority;
 	return s;
+}
+
+struct pcb_s * create_draw_process(func_t* entry) {
+	drawing_process = (struct pcb_s*) kAlloc(sizeof(struct pcb_s));
+	void * sp = kAlloc(10*1024);
+	drawing_process->sp = sp + 2560;
+	drawing_process->LR_SVC = (uint32_t)entry;
+	drawing_process->LR_USER = (uint32_t)entry;
+	drawing_process->CPSR_USER = 0x150;
+	drawing_process->currentState =  DRAW_OFF;
+	drawing_process->drawCounter =  10;
+	ENABLE_IRQ();
+	timer_init();
+	return drawing_process;
 }
 
 void elect()
@@ -135,7 +159,15 @@ void elect_fpp()
 	current_process = winning_process;
 }
 
-void do_sys_yield(int * new_stack) {
+// Caller : 0 FOR IRQ AND 1 FOR SWI 
+void do_sys_yield(int * new_stack, int caller) {
+	// ------------ Early exits for false positives --------------------
+	//We are currently drawing
+	if(current_process==drawing_process && current_process->currentState==DRAW_ON) {
+		return;
+	}
+	// -----------------------------------------------------------------
+	
 	//Backup old process
 	__asm("cps #31"); // System mode
 	__asm("mov %0, lr" : "=r"(current_process->LR_USER)); 
@@ -148,10 +180,28 @@ void do_sys_yield(int * new_stack) {
 		current_process->R[i] = *(new_stack + i);
 	}
 	current_process->LR_SVC = *(new_stack + 13);
-	current_process->currentState = WAITING;
 	
-	//Apply new process
-	if(chosen_method==FPP) {
+	//Apply new process with draw process special case
+	
+	//Collaborative
+	if(chosen_method==COLLABORATIVE) {
+		//Coming from IRQ
+		if(caller == 0) {
+			if(current_process==drawing_process) {
+				current_process = running_process;
+			} else {
+				current_process = drawing_process;
+			}
+		}
+		//Coming from sys_yield
+		else {
+			current_process->currentState = WAITING;
+			elect();
+			current_process->currentState = RUNNING;
+			running_process = current_process;
+		}
+	}
+	else if(chosen_method==FPP) {
 		elect_fpp();
 	} else {
 		elect();
@@ -168,7 +218,6 @@ void do_sys_yield(int * new_stack) {
 		*(new_stack + i) = current_process->R[i];
 	}
 	*(new_stack + 13) = current_process->LR_SVC;
-	current_process->currentState = RUNNING;
 }
 
 void sys_yield() {
@@ -202,4 +251,20 @@ void sys_exit(int codeRetour) {
     __asm("mov r0, %0" : : "r"(7));
     __asm("mov r1, %0" : : "r"(codeRetour));
     __asm("SWI #0");
+}
+
+void sys_draw(int boolean) {
+    __asm("mov r0, %0" : : "r"(5));
+    __asm("mov r1, %0" : : "r"(boolean));
+    __asm("SWI #0");
+}
+
+//Current process is drawing process and is asking state mod
+void do_sys_draw(int * new_stack, int boolean) {
+	if(boolean) {
+		current_process->currentState = DRAW_ON;
+		current_process->drawCounter = 10;
+	} else {
+		current_process->currentState = DRAW_OFF;
+	}
 }

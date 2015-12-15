@@ -1,4 +1,5 @@
 #include "fb.h"
+#include "sched.h"
 
 /*
  * Adresse du framebuffer, taille en byte, résolution de l'écran, pitch et depth (couleurs)
@@ -6,10 +7,6 @@
 static uint32 fb_address;
 static uint32 fb_size_bytes;
 static uint32 fb_x,fb_y,pitch,depth;
-
-/*
- * Fonction pour lire et écrire dans les mailboxs
- */
 
 /*
  * Fonction permettant d'écrire un message dans un canal de mailbox
@@ -242,13 +239,89 @@ void drawRed() {
 }
 
 /*
- * Rempli l'écran de blanc
+ * Rempli l'écran de bleu
  */
 void drawBlue() {
   uint32 x=0, y=0;
   for (x = 0; x < fb_x; x++) {
     for (y = 0; y < fb_y; y++) {
-      put_pixel_RGB24(x,y,0,0,255);
+      put_pixel_RGB24(x,y,0,0,0);
     }
   }
+}
+
+/*
+ *  Draw processes flags
+ */
+
+void drawFlag0() {
+  uint32 x=0, y=0;
+  for (x = 0; x < (fb_x/10); x++) {
+    for (y = 0; y < (fb_y/10); y++) {
+		put_pixel_RGB24(x,y,255,0,0);
+    }
+  }
+}
+
+void drawFlag1() {
+  uint32 x=0, y=0;
+  for (x = 0; x < (fb_x/10); x++) {
+    for (y = 0; y < (fb_y/10); y++) {
+		put_pixel_RGB24(x,y,0,255,0);
+    }
+  }
+}
+
+void drawFlag2() {
+  uint32 x=0, y=0;
+  for (x = 0; x < (fb_x/10); x++) {
+    for (y = 0; y < (fb_y/10); y++) {
+		put_pixel_RGB24(x,y,0,0,255);
+    }
+  }
+}
+
+void drawFlag3() {
+  uint32 x=0, y=0;
+  for (x = fb_x; x > 2*(fb_x/3); x--) {
+    for (y = 0; y < fb_y; y++) {
+      put_pixel_RGB24(x,y,255,0,0);
+    }
+    for(int j=0;j<5000;j++){}
+  }
+}
+
+/*
+ * Fonctions pour la visualisation d'ordonnanceur
+ */
+
+int NB_PROCESS = 8;
+
+void drawProcess(struct pcb_s * process, int shift_x, int shift_y) {
+	for (int x = shift_x; x < (shift_x+100); x++) {
+		for (int y = shift_y; y < (shift_y+100) ; y++) {
+			if(process->currentState==RUNNING) {
+				put_pixel_RGB24(x,y,255,0,0);
+			} else {
+				put_pixel_RGB24(x,y,255,255,255);
+			}
+		}
+	}
+}
+
+void drawSched(struct pcb_s * root_process) {
+	struct pcb_s * iterator = root_process;
+	int shift_x = 10, shift_y = 10;
+	int counter = 1;
+	do {
+		drawProcess(iterator, shift_x, shift_y);
+		counter++;
+		if(counter==5) {
+			shift_x = 10;
+			shift_y += (fb_y/2);
+		} else {
+			shift_x += (fb_x/4);
+		}
+		iterator = iterator->next;
+	} while(iterator != root_process);
 }

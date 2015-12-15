@@ -1,6 +1,7 @@
 #include "util.h"
 #include "hw.h"
 #include "syscall.h"
+#include "asm_tools.h"
 
 #define PANIC() do { kernel_panic(__FILE__,__LINE__) ; } while(0)
 
@@ -65,6 +66,7 @@ void __attribute__((naked)) swi_handler(void){
 	__asm("mov %0, sp" : "=r"(new_stack));
 	int numAppel;
 	__asm("mov %0, r0" : "=r"(numAppel));
+	DISABLE_TIMER_IRQ();
 	if(numAppel==1){
 		do_sys_reboot();
 	}else if(numAppel==2){
@@ -74,10 +76,11 @@ void __attribute__((naked)) swi_handler(void){
 	}else if(numAppel==4){
 		do_sys_gettime(new_stack);
 	}else if(numAppel==5){
-		do_sys_nop();
-		//do_sys_yieldto(new_stack);
+		int boolean;
+		__asm("mov %0, r0" : "=r"(boolean));
+		do_sys_draw(new_stack, boolean);
 	}else if(numAppel==6){
-		do_sys_yield(new_stack);
+		do_sys_yield(new_stack, 1);
 	}else if(numAppel==7){
 		int codeRetour;
 		__asm("mov %0, r0" : "=r"(codeRetour));
@@ -85,5 +88,6 @@ void __attribute__((naked)) swi_handler(void){
 	}else{
 		PANIC();
 	}
+	ENABLE_TIMER_IRQ();
 	__asm("ldmfd sp!, {r0-r12,PC}^");
 }

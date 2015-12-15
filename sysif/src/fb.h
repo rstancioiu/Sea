@@ -3,6 +3,7 @@
 
 #include "util.h"
 #include "hw.h"
+#include "sched.h"
 
 typedef uint32_t uint32;
 typedef uint8_t uint8;
@@ -61,5 +62,12 @@ void draw();
 void drawRed();
 
 void drawBlue();
+
+void drawFlag0();
+void drawFlag1();
+void drawFlag2();
+void drawFlag3();
+void drawSched(struct pcb_s * root_process);
+void drawProcess(struct pcb_s * process, int shift_x, int shift_y);
 
 #endif
