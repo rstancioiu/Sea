@@ -56,6 +56,8 @@ static inline uint32 mmio_read(uint32 reg) {
 
 int FramebufferInitialize();
 
+void pause();
+
 void draw();
 
 void drawRed();

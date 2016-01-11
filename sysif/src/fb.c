@@ -231,15 +231,24 @@ void draw() {
   }
 }
 
+void pause() {
+	int p = 5;
+	for(int i=0;i<4000;i++) {
+		p = (p*p)%27;
+	}
+}
+
 /*
  * Rempli l'écran de rouge
  */
 void drawRed() {
   uint32 x=0, y=0;
+  uint32 limit_y = fb_y/3;
   for (x = 0; x < fb_x; x++) {
-    for (y = 0; y < fb_y; y++) {
+    for (y = 0; y < limit_y; y++) {
       put_pixel_RGB24(x,y,255,0,0);
     }
+    pause();
   }
 }
 
@@ -248,10 +257,13 @@ void drawRed() {
  */
 void drawBlue() {
   uint32 x=0, y=0;
+  uint32 limit_y = fb_y/3;
+  uint32 limit_y2 = 2*fb_y/3;
   for (x = 0; x < fb_x; x++) {
-    for (y = 0; y < fb_y; y++) {
+    for (y = limit_y; y < limit_y2; y++) {
       put_pixel_RGB24(x,y,0,0,255);
     }
+    pause();
   }
 }
 
@@ -260,9 +272,11 @@ void drawBlue() {
  */
 void drawGreen() {
   uint32 x=0, y=0;
+  uint32 limit_y = 2*fb_y/3;
   for (x = 0; x < fb_x; x++) {
-    for (y = 0; y < fb_y; y++) {
+    for (y = limit_y; y < fb_y; y++) {
       put_pixel_RGB24(x,y,0,255,0);
     }
+    pause();
   }
 }

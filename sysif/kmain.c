@@ -4,48 +4,36 @@
 #include "fb.h"
 #include "asm_tools.h"
 
+// Help with timers
+// ++ until 5000000 = 3s
+
 void user_process1()
 {
-    int v1=5;
-    while(1)
-    {
-        v1++;
-        if(v1%50000==0) {
-			drawRed();
-			sys_yield();
-		}
-    }
+	drawGreen();
+	sys_exit(0);
 }
 
 void user_process2()
 {
-    int v2=-12;
-    while(1)
-    {
-        v2-=2;
-        sys_yield();
-    }
+	drawRed();
+	sys_exit(0);
 }
 
 void user_process3()
 {
-    int v3=0;
-    while(1)
-    {
-        v3+=5;
-        if(v3%250000==0) {
-			drawBlue();
-			sys_yield();
-		}
-    }
+	drawBlue();
+	sys_exit(0);
 }
 
 void kmain( void )
 {
 	FramebufferInitialize();
-	drawBlue();
-	
-    sched_init(COLLABORATIVE);
+    sched_init(PREEMPTIVE);
+    
+    int p = 5;
+	for(int i=0;i<5000000;i++) {
+		p = (p*p)%27;
+	}
 
     create_process((func_t*)&user_process1);
 	create_process((func_t*)&user_process2);
@@ -53,8 +41,5 @@ void kmain( void )
 	
     __asm("cps 0x10"); // switch CPU to USER mode
 
-    while(1)
-    {
-        sys_yield();
-    }
+    sys_exit(0);
 }

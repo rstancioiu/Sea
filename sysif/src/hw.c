@@ -55,7 +55,8 @@ void
 set_next_tick_default()
 {
     uint32_t date_lowbits = Get32(CLO);
-    date_lowbits += DEFAULT_TIMER_INTERVAL;
+    uint32_t time_ms = 2;
+    date_lowbits += (uint32_t) (time_ms * SYS_TIMER_CLOCK_div_1000) ;
     Set32(C1, date_lowbits);
 }
 

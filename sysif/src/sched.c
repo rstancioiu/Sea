@@ -71,15 +71,23 @@ struct pcb_s * create_fpp_process(func_t* entry, int basePriority, int priority)
 
 void elect()
 {
-    while(current_process->next->currentState == TERMINATED) {
+	if(current_process->next->currentState == TERMINATED) {
 		if(current_process->next == current_process) {
 			terminate_kernel();
 		}
+		
 		struct pcb_s * next = current_process->next->next;
+		struct pcb_s * old_next;
 		kFree((void*) current_process->next, sizeof(struct pcb_s*));
+		while(next->currentState == TERMINATED) {
+			old_next = next;
+			next = next->next;
+			kFree((void*) old_next, sizeof(struct pcb_s*));
+		}
+		
 		current_process->next = next;
 	}
-    current_process = current_process->next;
+	current_process = current_process->next;
 }
 
 void elect_fpp()
