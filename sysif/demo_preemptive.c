@@ -28,16 +28,16 @@ void user_process3()
 void kmain( void )
 {
 	FramebufferInitialize();
-    sched_init(FPP);
+    sched_init(PREEMPTIVE);
     
     int p = 5;
 	for(int i=0;i<5000000;i++) {
 		p = (p*p)%27;
 	}
 
-    create_fpp_process((func_t*)&user_process1, 3, 3);
-	create_fpp_process((func_t*)&user_process2, 1, 1);
-	create_fpp_process((func_t*)&user_process3, 1, 1);
+    create_process((func_t*)&user_process1);
+	create_process((func_t*)&user_process2);
+	create_process((func_t*)&user_process3);
 	
     __asm("cps 0x10"); // switch CPU to USER mode
 
