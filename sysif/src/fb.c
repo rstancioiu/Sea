@@ -1,4 +1,6 @@
 #include "fb.h"
+#include "sched.h"
+#include "syscall.h"
 
 /*
  * Adresse du framebuffer, taille en byte, résolution de l'écran, pitch et depth (couleurs)
@@ -242,13 +244,25 @@ void drawRed() {
 }
 
 /*
- * Rempli l'écran de blanc
+ * Rempli l'écran de bleu
  */
 void drawBlue() {
   uint32 x=0, y=0;
   for (x = 0; x < fb_x; x++) {
     for (y = 0; y < fb_y; y++) {
       put_pixel_RGB24(x,y,0,0,255);
+    }
+  }
+}
+
+/*
+ * Rempli l'écran de vert
+ */
+void drawGreen() {
+  uint32 x=0, y=0;
+  for (x = 0; x < fb_x; x++) {
+    for (y = 0; y < fb_y; y++) {
+      put_pixel_RGB24(x,y,0,255,0);
     }
   }
 }

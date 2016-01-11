@@ -62,4 +62,6 @@ void drawRed();
 
 void drawBlue();
 
+void drawGreen();
+
 #endif

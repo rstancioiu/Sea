@@ -11,25 +11,16 @@ int * irq_stack;
 schedMethod chosen_method;
 
 void __attribute__((naked)) irq_handler(void) {
-	// Backup du LR IRQ
-	__asm("mov %0, lr" : "=r"(lr_irq));	
-	
-	//Passage en SVC
-	__asm("cps 0x13");
-	__asm("push {%0}" : : "r"(lr_irq-4));
-	__asm("stmfd sp!, {r0-r12}");
-	__asm("mov %0, sp" : "=r"(irq_stack));	
+	__asm("stmfd sp!, {r0-r12,LR}");
+	__asm("mov %0, sp" : "=r"(irq_stack));
+	*(irq_stack + 13) -= 4;
 	
 	//Changement de contexte
+	do_sys_yield(irq_stack);
 	set_next_tick_default();
 	ENABLE_TIMER_IRQ();
-	ENABLE_IRQ();
-	do_sys_yield(irq_stack);
-	__asm("ldmfd sp!, {r0-r12}^");
-	__asm("pop {%0}" : "=r"(lr_irq));
 	
-	//Jump
-	__asm("mov pc, %0" : : "r"(lr_irq));
+	__asm("ldmfd sp!, {r0-r12,PC}^");
 }
 
 void sched_init(schedMethod method) {
@@ -139,8 +130,11 @@ void do_sys_yield(int * new_stack) {
 	//Backup old process
 	__asm("cps #31"); // System mode
 	__asm("mov %0, lr" : "=r"(current_process->LR_USER)); 
-	__asm("mov %0, sp" : "=r"(current_process->sp));  
-	__asm("cps #19"); // Back to SVC
+	__asm("mov %0, sp" : "=r"(current_process->sp));
+	if(chosen_method==PREEMPTIVE || chosen_method==FPP)
+		__asm("cps #18"); // Back to IRQ
+	else
+		__asm("cps #19"); // Back to SVC
 	
 	//__asm("mrs %0, spsr" : "=r"(current_process->CPSR_USER));
 	
@@ -156,11 +150,14 @@ void do_sys_yield(int * new_stack) {
 	} else {
 		elect();
 	}
-	
+
 	__asm("cps #31"); // System mode
 	__asm("mov lr, %0" : : "r"(current_process->LR_USER)); 
 	__asm("mov sp, %0" : : "r"(current_process->sp));  
-	__asm("cps #19"); // Back to SVC
+	if(chosen_method==PREEMPTIVE || chosen_method==FPP)
+		__asm("cps #18"); // Back to IRQ
+	else
+		__asm("cps #19"); // Back to SVC
 	
 	//__asm("msr spsr, %0" : : "r"(current_process->CPSR_USER));
 	
