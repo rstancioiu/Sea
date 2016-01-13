@@ -3,9 +3,9 @@
 #include "syscall.h"
 #include "kheap.h"
 
-#define ROWS 80
-#define COLS 100
-#define SIZE 10
+#define ROWS 40
+#define COLS 50
+#define SIZE 5
  
 #define GETCOL(c) (c%COLS)
 #define GETROW(c) (c/COLS)
@@ -308,63 +308,131 @@ typedef struct
     cell cells[ROWS*COLS];
 } world;
 
-world result_real;
-world * result;
+world result[4];
  
-void evolve_cell(cell* c)
+void evolve_cell(cell* c, int id)
 {
     int count=0, i;
     for (i=0; i<8; i++)
     {
-        if (c->neighbour[i]->curr_state)
-        count++;
+        if (c->neighbour[i]->curr_state==1)
+			count++;
     }
-    if (c->curr_state==1)
-		c->next_state = 0;
-	else if (c->curr_state==0 && count == 2)
-		c->next_state = 1;
+    
+    //Rules for world 1 (seeds)
+    if(id==0) {
+		if (c->curr_state==1)
+			c->next_state = 0;
+		else if (c->curr_state==0 && count == 2)
+			c->next_state = 1;
+	}
+	
+	//Rules for world 2 (brian brain)
+	
+    else if(id==1) {
+		//dying
+		if (c->curr_state==2)
+			c->next_state = 0;
+		else if (c->curr_state==0 && count==2)
+			c->next_state = 1;
+		else if(c->curr_state==1)
+			c->next_state = 2;
+	}
+	
+	//Rules for world 3 (conway)
+	
+    else if(id==2) {
+		if (c->curr_state==1 && (count>3 || count<2))
+			c->next_state = 0;
+		else if (c->curr_state==0 && count == 2)
+			c->next_state = 1;
+	}
+	
+	
+	//Rules for world 4 (day and night)
+    else if(id==3) {
+		if (c->curr_state==1 && count!=3 && count!=4 && count!=6 && count!=7)
+			c->next_state = 0;
+		else if (c->curr_state==0 && (count==3 || count==4 || count==6 || count==7 || count==8))
+			c->next_state = 1;
+	}
 }
  
-void update_world()
+void update_world(int id)
 {
-    int nrcells = result->rows * result->cols, i;
+	uint32_t x_init, y_init;
+	if(id==0) {
+		x_init = 400;
+		y_init = 100;
+	} else if (id==1) {
+		x_init = 900;
+		y_init = 100;
+	} else if (id==2) {
+		x_init = 400;
+		y_init = 500;
+	} else if (id==3) {
+		x_init = 900;
+		y_init = 500;
+	}
+	
+    int nrcells = result[id].rows * result[id].cols, i;
     
     for (i=0; i<nrcells; i++)
     {
-        evolve_cell(result->cells+i);
+        evolve_cell(result[id].cells+i, id);
     }
     
-    uint32_t x = 400, y = 100;
+    uint32_t x = x_init, y = y_init;
     for (i=0; i<nrcells; i++)
     {
 		if (!(i%COLS)) {
 			y+=SIZE;
-			x = 400;
+			x = x_init;
 		} else {
 			x+=SIZE;
 		}
-		
-		if(result->cells[i].curr_state == result->cells[i].next_state)
+		/*
+		if(result[id].cells[i].curr_state == result[id].cells[i].next_state)
 			continue;
-        result->cells[i].curr_state = result->cells[i].next_state;
+		*/
+        result[id].cells[i].curr_state = result[id].cells[i].next_state;
 		for(int k=x;k<(x+SIZE);k++) {
 			for(int j=y;j<(y+SIZE);j++) {
-				put_pixel_RGB24(k,j,result->cells[i].curr_state ? 255 : 0,0,0);
+				//Color for world 1 (seeds)
+				if(id==0)
+					put_pixel_RGB24(k,j,result[id].cells[i].curr_state ? 187 : 0,result[id].cells[i].curr_state ? 187 : 0,0);
+				//Color for world 2 (brian brain)
+				else if(id==1) {
+					if(result[id].cells[i].curr_state==0) {
+						put_pixel_RGB24(k,j,0,0,0);
+					} else if(result[id].cells[i].curr_state==1) {
+						put_pixel_RGB24(k,j,0,44,208);
+					} else if(result[id].cells[i].curr_state==2) {
+						put_pixel_RGB24(k,j,0,76,214);
+					}
+					
+				}
+				//Color for world 3 (conway)
+				else if(id==2)
+					put_pixel_RGB24(k,j,result[id].cells[i].curr_state ? 177 : 0,0,result[id].cells[i].curr_state ? 36 : 0);
+				//Color for world 4 (day and night)
+				else if(id==3)
+					put_pixel_RGB24(k,j,result[id].cells[i].curr_state ? 255 : 0,0,result[id].cells[i].curr_state ? 255 : 0);
 			}
 		}
     }
 }
  
-void init_world()
+void init_world(int id)
 {
-    result->rows = ROWS;
-    result->cols = COLS;
+    result[id].rows = ROWS;
+    result[id].cols = COLS;
      
-    int nrcells = result->rows * result->cols, i;
+    int nrcells = result[id].rows * result[id].cols, i;
      
     for (i = 0; i < nrcells; i++)
     {
-        cell* c = result->cells + i;
+        cell* c = result[id].cells + i;
              
         c->neighbour[0] = c+D_LEFT(i);
         c->neighbour[1] = c+D_RIGHT(i);
@@ -375,47 +443,96 @@ void init_world()
         c->neighbour[6] = c+D_RIGHT(i)  + D_TOP(i);
         c->neighbour[7] = c+D_RIGHT(i)  + D_BOTTOM(i);
         
-        
-        if(i>(nrcells/2 + COLS/2 -2) && i<(nrcells/2 + COLS/2 +3)) {
-			if(i!=(nrcells/2)) {
+        //Pattern for world 1 (seeds)
+        if(id==0) {
+			if(i>(nrcells/2 + COLS/2 -2) && i<(nrcells/2 + COLS/2 +3)) {
+				if(i!=(nrcells/2)) {
+					c->curr_state = 1;
+					if(i%2==0) {
+						(c+D_TOP(i))->curr_state = 1;
+					}
+					if(i%3==0) {
+						(c+2*D_TOP(i))->curr_state = 1;
+					}
+				}
+			}
+			else
+				c->curr_state = 0;
+		}
+		//Pattern for world 2 (brian brain)
+		else if(id==1) {
+			if(i>(nrcells/2 - COLS -10) && i<(nrcells/2 + COLS +10)) {
 				c->curr_state = 1;
 				if(i%2==0) {
 					(c+D_TOP(i))->curr_state = 1;
-				}
-				if(i%3==0) {
-					(c+2*D_TOP(i))->curr_state = 1;
+					(c+3*D_TOP(i))->curr_state = 1;
+					(c+2*D_TOP(i)+D_LEFT(i))->curr_state = 1;
 				}
 			}
+			else
+				c->curr_state = 0;
 		}
-		else
-			c->curr_state = 0;
+		//Pattern for world 3 (conway)
+		else if(id==2) {
+			if(i==(nrcells/2)) {
+				c->curr_state = 1;
+				(c+D_TOP(i))->curr_state = 1;
+				(c+D_TOP(i)+D_LEFT(i))->curr_state = 1;
+			}
+			else
+				c->curr_state = 0;
+		}
+		//Pattern for world 4 (day and night)
+		else if(id==3) {
+			if(i>(nrcells/2 + COLS/2 -5) && i<(nrcells/2 + COLS/2 +5)) {
+				if(i!=(nrcells/2 + COLS/2)) {
+					c->curr_state = 1;
+					if(i%2==0) {
+						(c+D_TOP(i))->curr_state = 1;
+						(c+2*D_TOP(i))->curr_state = 1;
+						(c+2*D_TOP(i)+D_LEFT(i))->curr_state = 1;
+					}
+				}
+			}
+			else
+				c->curr_state = 0;
+		}
     }
 }
 
 void conway1() {
-	result = &result_real;
-	init_world();
-	int nrcells = result->rows * result->cols, i;
-	uint32_t x = 400, y = 100;
-    for (i=0; i<nrcells; i++)
-    {
-        if (!(i%COLS)) {
-			y+=SIZE;
-			x = 400;
-		} else {
-			x+=SIZE;
-		}
-		for(int k=x;k<(x+SIZE);k++) {
-			for(int j=y;j<(y+SIZE);j++) {
-				put_pixel_RGB24(k,j,result->cells[i].curr_state ? 255 : 0,0,0);
-			}
-		}
-    }
+	init_world(0);
 	while(1) {
-		update_world();
-		int k = 0;
-		for(int j=0;j<500000;j++){
-			k++;
-		}
+		update_world(0);
+	}
+}
+
+void conway2() {
+	init_world(1);
+	while(1) {
+		update_world(1);
+	}
+}
+
+void conway3() {
+	init_world(2);
+	while(1) {
+		update_world(2);
+	}
+}
+
+void conway4() {
+	init_world(3);
+	while(1) {
+		update_world(3);
+	}
+}
+
+void init_lines() {
+	for(int i=300; i<fb_x-300;i++) {
+		put_pixel_RGB24(i,fb_y/2-130,255,255,255);
+	}
+	for(int i=50; i<fb_y-250;i++) {
+		put_pixel_RGB24(fb_x/2-20,i,255,255,255);
 	}
 }

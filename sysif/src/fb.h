@@ -67,5 +67,6 @@ void conway1();
 void conway2();
 void conway3();
 void conway4();
+void init_lines();
 
 #endif
