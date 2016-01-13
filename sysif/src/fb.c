@@ -1,6 +1,19 @@
 #include "fb.h"
 #include "sched.h"
 #include "syscall.h"
+#include "kheap.h"
+
+#define ROWS 80
+#define COLS 100
+#define SIZE 10
+ 
+#define GETCOL(c) (c%COLS)
+#define GETROW(c) (c/COLS)
+ 
+#define D_LEFT(c)   ((GETCOL(c) == 0) ? (COLS-1) :  -1)
+#define D_RIGHT(c)  ((GETCOL(c) == COLS-1) ? (-COLS+1) :  1)
+#define D_TOP(c)    ((GETROW(c) == 0) ? ((ROWS-1) * COLS) : -COLS)
+#define D_BOTTOM(c) ((GETROW(c) == ROWS-1) ? (-(ROWS-1) * COLS) : COLS)
 
 /*
  * Adresse du framebuffer, taille en byte, résolution de l'écran, pitch et depth (couleurs)
@@ -279,4 +292,130 @@ void drawGreen() {
     }
     pause();
   }
+}
+ 
+typedef struct _cell
+{
+    struct _cell* neighbour[8];
+    char curr_state;
+    char next_state;
+} cell;
+ 
+typedef struct
+{
+    int rows;
+    int cols;
+    cell cells[ROWS*COLS];
+} world;
+
+world result_real;
+world * result;
+ 
+void evolve_cell(cell* c)
+{
+    int count=0, i;
+    for (i=0; i<8; i++)
+    {
+        if (c->neighbour[i]->curr_state)
+        count++;
+    }
+    if (c->curr_state==1)
+		c->next_state = 0;
+	else if (c->curr_state==0 && count == 2)
+		c->next_state = 1;
+}
+ 
+void update_world()
+{
+    int nrcells = result->rows * result->cols, i;
+    
+    for (i=0; i<nrcells; i++)
+    {
+        evolve_cell(result->cells+i);
+    }
+    
+    uint32_t x = 400, y = 100;
+    for (i=0; i<nrcells; i++)
+    {
+		if (!(i%COLS)) {
+			y+=SIZE;
+			x = 400;
+		} else {
+			x+=SIZE;
+		}
+		
+		if(result->cells[i].curr_state == result->cells[i].next_state)
+			continue;
+        result->cells[i].curr_state = result->cells[i].next_state;
+		for(int k=x;k<(x+SIZE);k++) {
+			for(int j=y;j<(y+SIZE);j++) {
+				put_pixel_RGB24(k,j,result->cells[i].curr_state ? 255 : 0,0,0);
+			}
+		}
+    }
+}
+ 
+void init_world()
+{
+    result->rows = ROWS;
+    result->cols = COLS;
+     
+    int nrcells = result->rows * result->cols, i;
+     
+    for (i = 0; i < nrcells; i++)
+    {
+        cell* c = result->cells + i;
+             
+        c->neighbour[0] = c+D_LEFT(i);
+        c->neighbour[1] = c+D_RIGHT(i);
+        c->neighbour[2] = c+D_TOP(i);
+        c->neighbour[3] = c+D_BOTTOM(i);
+        c->neighbour[4] = c+D_LEFT(i)   + D_TOP(i);
+        c->neighbour[5] = c+D_LEFT(i)   + D_BOTTOM(i);
+        c->neighbour[6] = c+D_RIGHT(i)  + D_TOP(i);
+        c->neighbour[7] = c+D_RIGHT(i)  + D_BOTTOM(i);
+        
+        
+        if(i>(nrcells/2 + COLS/2 -2) && i<(nrcells/2 + COLS/2 +3)) {
+			if(i!=(nrcells/2)) {
+				c->curr_state = 1;
+				if(i%2==0) {
+					(c+D_TOP(i))->curr_state = 1;
+				}
+				if(i%3==0) {
+					(c+2*D_TOP(i))->curr_state = 1;
+				}
+			}
+		}
+		else
+			c->curr_state = 0;
+    }
+}
+
+void conway1() {
+	result = &result_real;
+	init_world();
+	int nrcells = result->rows * result->cols, i;
+	uint32_t x = 400, y = 100;
+    for (i=0; i<nrcells; i++)
+    {
+        if (!(i%COLS)) {
+			y+=SIZE;
+			x = 400;
+		} else {
+			x+=SIZE;
+		}
+		for(int k=x;k<(x+SIZE);k++) {
+			for(int j=y;j<(y+SIZE);j++) {
+				put_pixel_RGB24(k,j,result->cells[i].curr_state ? 255 : 0,0,0);
+			}
+		}
+    }
+	while(1) {
+		update_world();
+		int k = 0;
+		for(int j=0;j<500000;j++){
+			k++;
+		}
+	}
 }

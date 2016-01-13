@@ -114,9 +114,7 @@ void elect_fpp()
 				maxPriority = iterator->priority;
 				winning_process = iterator;
 			}
-			int cur = iterator->priority;
 			iterator = iterator->next;
-			cur++;
 		}
 	} while(iterator != current_process);
 	
@@ -187,7 +185,11 @@ void do_sys_exit(int * new_stack, int codeRetour) {
 	current_process->codeRetour = codeRetour;
 	
 	//Apply new process
-	elect();
+	if(chosen_method==FPP) {
+		elect_fpp();
+	} else {
+		elect();
+	}
 	
 	__asm("cps #31"); // System mode
 	__asm("mov lr, %0" : : "r"(current_process->LR_USER)); 

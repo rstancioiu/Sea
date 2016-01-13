@@ -59,11 +59,13 @@ int FramebufferInitialize();
 void pause();
 
 void draw();
-
 void drawRed();
-
 void drawBlue();
-
 void drawGreen();
+
+void conway1();
+void conway2();
+void conway3();
+void conway4();
 
 #endif
