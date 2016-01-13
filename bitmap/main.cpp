@@ -22,34 +22,44 @@ int main()
   const unsigned int height=image.height();
   const unsigned int width =image.width();
   int k=0;
+  cout<<height/M<<" "<<width/N<<endl;
+  freopen("output.txt","w",stdout);
+  cout<<"{"<<endl;
   for(int i=0;i<N;++i)
   {
     for(int j=0;j<M;++j)
     {
-      size_t a = i*width/N;
-      size_t b = (i+1)*width/N;
-      size_t c = j*height/M;
-      size_t d = (j+1)*height/M;
+      size_t a = i*(width/N);
+      size_t b = (i+1)*(width/N);
+      size_t c = j*(height/M);
+      size_t d = (j+1)*(height/M);
       int pos = j*N+i;
       if(pos!=21 && pos!=27)
       {
-        string s="test/";
-        s+=(char)('A'+k);
-        s+=".out";
-        const char * filename = s.c_str();
-        freopen(filename,"w",stdout);
+        if(!(i==0 && j==0))
+          cout<<","<<endl;
+        cout<<"{ ";
+        bool f=true;
         for(size_t y=c;y<d;++y)
         {
           for(size_t x=a;x<b;++x)
           {
             image.get_pixel(x,y,red,green,blue);
-            cout<<(int)red<<" "<<(int)green<<" "<<(int)blue<<endl;
+            if(f) f=false;
+            else cout<<", ";
+            if(red==0 && green==0 && blue==0)
+              red=green=blue=255;
+            else
+              red=green=blue=0; 
+            cout<<"{"<<(int)red<<", "<<(int)green<<", "<<(int)blue<<"}"<<endl;
           }
         }
+        cout<<"}"<<endl;
         k++;
       }
     }
   }
+  cout<<"}"<<endl;
   return 0;
 }
 
